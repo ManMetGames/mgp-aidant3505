@@ -52,15 +52,25 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* SprintAction;
 
-	/** Movement speeds */
+	/** Movement Speeds */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float WalkSpeed = 300.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float SprintSpeed = 600.f;
 
-	/** Line Trace */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Line Trace")
-	float TraceDistance = 50.f;
+	/** Mantle Traces */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
+	float TraceDistance = 70.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
+	float LowerTraceHeightOffset = -20.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
+	float UpperTraceHeightOffset = 60.f;
+
+
+
 
 
 public:
