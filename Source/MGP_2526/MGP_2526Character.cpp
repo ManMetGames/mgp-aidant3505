@@ -55,7 +55,7 @@ void AMGP_2526Character::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	PerformForwardLineTrace();
+	DoMantleDetection();
 }
 
 
@@ -161,39 +161,61 @@ void AMGP_2526Character::SprintStop()
 	}
 }
 
-void AMGP_2526Character::PerformForwardLineTrace()
+// Mantle detection
+void AMGP_2526Character::DoMantleDetection()
 {
 	UCapsuleComponent* Capsule = GetCapsuleComponent();
 	if (!Capsule) return;
 
-	// gets world location and rotation
-	const FVector Start = Capsule->GetComponentLocation();
+	const FVector CapsuleOrigin = Capsule->GetComponentLocation();
 	const FVector ForwardVector = Capsule->GetForwardVector();
-	const FVector End = Start + (ForwardVector * TraceDistance); // value assigned in header
 
+	// ------------------------------------------------------------------
+	// Lower trace  (chest/hip height)
+	// Hits the wall face the player is walking toward
+	// ------------------------------------------------------------------
+	const FVector LowerStart = CapsuleOrigin + FVector(0.f, 0.f, LowerTraceHeightOffset);
+	const FVector LowerEnd = LowerStart + ForwardVector * TraceDistance;
+
+	FHitResult LowerHit;
+	const bool bLowerHit = FireMantleTrace(LowerStart, LowerEnd, LowerHit, true);
+
+	// ------------------------------------------------------------------
+	// Upper trace  (head/shoulder height)
+	// If this ALSO hits, the wall is too tall to mantle
+	// ------------------------------------------------------------------
+	const FVector UpperStart = CapsuleOrigin + FVector(0.f, 0.f, UpperTraceHeightOffset);
+	const FVector UpperEnd = UpperStart + ForwardVector * TraceDistance;
+
+	FHitResult UpperHit;
+	const bool bUpperHit = FireMantleTrace(UpperStart, UpperEnd, UpperHit, true);
+
+	// ------------------------------------------------------------------
+	// Ledge condition: lower hits wall, upper is clear
+	// ------------------------------------------------------------------
+	if (bLowerHit && !bUpperHit)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan, "Can mantle");
+	}
+}
+
+
+bool AMGP_2526Character::FireMantleTrace(const FVector& Start, const FVector& End, FHitResult& OutHit, bool bDrawDebug) const
+{
 	TArray<AActor*> ActorsToIgnore;
-	ActorsToIgnore.Add(this);
+	ActorsToIgnore.Add(const_cast<AMGP_2526Character*>(this));
 
-	FHitResult HitResult;
-
-	// line trace by channel
-	UKismetSystemLibrary::LineTraceSingle(
-		this,
+	return UKismetSystemLibrary::LineTraceSingle(
+		const_cast<AMGP_2526Character*>(this),
 		Start,
 		End,
 		UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		false,                          // trace complex
+		false,                                                    // Trace Complex
 		ActorsToIgnore,
-		EDrawDebugTrace::ForOneFrame,   // debug type
-		HitResult,
-		true                            // ignores self
+		bDrawDebug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
+		OutHit,
+		true                                                      // Ignore Self
 	);
-
-	// debugs what the line trace hits
-	if (HitResult.bBlockingHit && HitResult.GetActor())
-	{
-		const FString DisplayName = HitResult.GetActor()->GetActorNameOrLabel();
-		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan, DisplayName);
-	}
 }
+
 

@@ -129,6 +129,10 @@ public:
 
 private:
 
-	void PerformForwardLineTrace();
+	void DoMantleDetection();
+
+	/** Fires a single line trace; returns true on a blocking hit. */
+	bool FireMantleTrace(const FVector& Start, const FVector& End, FHitResult& OutHit, bool bDrawDebug) const;
+
 };
 
