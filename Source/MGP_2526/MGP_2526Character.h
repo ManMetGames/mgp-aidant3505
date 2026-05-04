@@ -58,10 +58,19 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float SprintSpeed = 600.f;
 
+	/** Line Trace */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Line Trace")
+	float TraceDistance = 50.f;
+
+
 public:
 
 	/** Constructor */
 	AMGP_2526Character();	
+
+	/** Called every frame */
+	virtual void Tick(float DeltaTime) override;
+
 
 protected:
 
@@ -102,10 +111,14 @@ public:
 
 public:
 
-	/** Returns CameraBoom subobject **/
+	/** Returns CameraBoom subobject */
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
-	/** Returns FollowCamera subobject **/
+	/** Returns FollowCamera subobject */
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+private:
+
+	void PerformForwardLineTrace();
 };
 

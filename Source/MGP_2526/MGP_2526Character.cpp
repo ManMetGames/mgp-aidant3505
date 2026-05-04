@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "MGP_2526Character.h"
 #include "Engine/LocalPlayer.h"
@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "MGP_2526.h"
 
 AMGP_2526Character::AMGP_2526Character()
@@ -49,6 +50,14 @@ AMGP_2526Character::AMGP_2526Character()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
+
+void AMGP_2526Character::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	PerformForwardLineTrace();
+}
+
 
 void AMGP_2526Character::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -151,3 +160,40 @@ void AMGP_2526Character::SprintStop()
 		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	}
 }
+
+void AMGP_2526Character::PerformForwardLineTrace()
+{
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+	if (!Capsule) return;
+
+	// gets world location and rotation
+	const FVector Start = Capsule->GetComponentLocation();
+	const FVector ForwardVector = Capsule->GetForwardVector();
+	const FVector End = Start + (ForwardVector * TraceDistance); // value assigned in header
+
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(this);
+
+	FHitResult HitResult;
+
+	// line trace by channel
+	UKismetSystemLibrary::LineTraceSingle(
+		this,
+		Start,
+		End,
+		UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		false,                          // trace complex
+		ActorsToIgnore,
+		EDrawDebugTrace::ForOneFrame,   // debug type
+		HitResult,
+		true                            // ignores self
+	);
+
+	// debugs what the line trace hits
+	if (HitResult.bBlockingHit && HitResult.GetActor())
+	{
+		const FString DisplayName = HitResult.GetActor()->GetActorNameOrLabel();
+		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan, DisplayName);
+	}
+}
+
