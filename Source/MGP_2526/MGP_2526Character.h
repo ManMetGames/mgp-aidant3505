@@ -90,6 +90,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
 	float MantleBuffer = 40.f;
 
+	/** Mantle Animation */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Animation")
+	UAnimMontage* MantleMontage = nullptr;
+
 
 public:
 
