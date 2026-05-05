@@ -166,7 +166,9 @@ private:
 	void TickMantle(float DeltaTime);
 
 	// Runtime mantle state
-	bool    bIsMantling = false;
+	bool bIsMantling = false;
 	FVector MantleTargetLocation = FVector::ZeroVector;
+
+	bool bIsSprinting = false;
 };
 

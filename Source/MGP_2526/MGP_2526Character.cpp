@@ -169,6 +169,7 @@ void AMGP_2526Character::SprintStart()
 	{
 		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
 	}
+	bIsSprinting = true;
 }
 
 void AMGP_2526Character::SprintStop()
@@ -177,6 +178,7 @@ void AMGP_2526Character::SprintStop()
 	{
 		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	}
+	bIsSprinting = false;
 }
 
 // Mantle detection
@@ -202,8 +204,8 @@ void AMGP_2526Character::DoMantleDetection()
 	FHitResult UpperHit;
 	const bool bUpperHit = FireMantleTrace(UpperStart, UpperEnd, UpperHit, true);
 
-	// Checks if lower hits a wall but upper is clear
-	if (bLowerHit && !bUpperHit)
+	// Checks if player has met the conditions to be able to mantle
+	if (bLowerHit && !bUpperHit && bIsSprinting)
 	{
 		StartMantle(LowerHit.ImpactPoint);
 		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan, "Can mantle");
