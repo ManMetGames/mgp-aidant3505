@@ -87,19 +87,19 @@ void AMGP_2526Character::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
 void AMGP_2526Character::Move(const FInputActionValue& Value)
 {
-	// input is a Vector2D
+	// Input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
-	// route the input
+	// Route the input
 	DoMove(MovementVector.X, MovementVector.Y);
 }
 
 void AMGP_2526Character::Look(const FInputActionValue& Value)
 {
-	// input is a Vector2D
+	// Input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
-	// route the input
+	// Route the input
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
 }
 
@@ -107,17 +107,17 @@ void AMGP_2526Character::DoMove(float Right, float Forward)
 {
 	if (GetController() != nullptr)
 	{
-		// find out which way is forward
+		// Find out which way is forward
 		const FRotator Rotation = GetController()->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
 
-		// get forward vector
+		// Get forward vector
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 
-		// get right vector 
+		// Get right vector 
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
-		// add movement 
+		// Add movement 
 		AddMovementInput(ForwardDirection, Forward);
 		AddMovementInput(RightDirection, Right);
 	}
@@ -127,7 +127,7 @@ void AMGP_2526Character::DoLook(float Yaw, float Pitch)
 {
 	if (GetController() != nullptr)
 	{
-		// add yaw and pitch input to controller
+		// Add yaw and pitch input to controller
 		AddControllerYawInput(Yaw);
 		AddControllerPitchInput(Pitch);
 	}
@@ -135,13 +135,13 @@ void AMGP_2526Character::DoLook(float Yaw, float Pitch)
 
 void AMGP_2526Character::DoJumpStart()
 {
-	// signal the character to jump
+	// Signal the character to jump
 	Jump();
 }
 
 void AMGP_2526Character::DoJumpEnd()
 {
-	// signal the character to stop jumping
+	// Signal the character to stop jumping
 	StopJumping();
 }
 
@@ -170,29 +170,21 @@ void AMGP_2526Character::DoMantleDetection()
 	const FVector CapsuleOrigin = Capsule->GetComponentLocation();
 	const FVector ForwardVector = Capsule->GetForwardVector();
 
-	// ------------------------------------------------------------------
-	// Lower trace  (chest/hip height)
-	// Hits the wall face the player is walking toward
-	// ------------------------------------------------------------------
+	// Lower trace  
 	const FVector LowerStart = CapsuleOrigin + FVector(0.f, 0.f, LowerTraceHeightOffset);
 	const FVector LowerEnd = LowerStart + ForwardVector * TraceDistance;
 
 	FHitResult LowerHit;
 	const bool bLowerHit = FireMantleTrace(LowerStart, LowerEnd, LowerHit, true);
 
-	// ------------------------------------------------------------------
-	// Upper trace  (head/shoulder height)
-	// If this ALSO hits, the wall is too tall to mantle
-	// ------------------------------------------------------------------
+	// Upper trace
 	const FVector UpperStart = CapsuleOrigin + FVector(0.f, 0.f, UpperTraceHeightOffset);
 	const FVector UpperEnd = UpperStart + ForwardVector * TraceDistance;
 
 	FHitResult UpperHit;
 	const bool bUpperHit = FireMantleTrace(UpperStart, UpperEnd, UpperHit, true);
 
-	// ------------------------------------------------------------------
-	// Ledge condition: lower hits wall, upper is clear
-	// ------------------------------------------------------------------
+	// Checks if lower hits a wall but upper is clear
 	if (bLowerHit && !bUpperHit)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan, "Can mantle");

@@ -61,7 +61,7 @@ protected:
 
 	/** Mantle Traces */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
-	float TraceDistance = 70.f;
+	float TraceDistance = 40.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
 	float LowerTraceHeightOffset = -20.f;
@@ -69,8 +69,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
 	float UpperTraceHeightOffset = 60.f;
 
+	/** Mantle Movement */
+	// How fast the character moves to the mantle target
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
+	float MantleInterpSpeed = 10.f;
 
+	// How far forward past the edge of the ledge the character is placed
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
+	float MantleForwardOffset = 60.f;
 
+	// Distance threshold at which the mantle is considered complete 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
+	float MantleCompletionRadius = 10.f;
 
 
 public:
@@ -113,11 +123,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
 
+	/** Handles sprint input */
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void SprintStart();
 
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void SprintStop();
+
+	/** Returns true while the character is mid-mantle. Used for animation */
+	UFUNCTION(BlueprintPure, Category = "Mantle")
+	bool IsMantling() const { return bIsMantling; }
+
 
 public:
 
@@ -129,10 +145,20 @@ public:
 
 private:
 
+	/**Fires the lower and upper traces each tick */
 	void DoMantleDetection();
 
-	/** Fires a single line trace; returns true on a blocking hit. */
+	/** Fires a single line trace and returns true on a hit */
 	bool FireMantleTrace(const FVector& Start, const FVector& End, FHitResult& OutHit, bool bDrawDebug) const;
 
+	/** Called once when a mantleable ledge is first detected */
+	void StartMantle(const FVector& WallHitLocation);
+
+	/** Called every tick while bIsMantling is true */
+	void TickMantle(float DeltaTime);
+
+	// Runtime mantle state
+	bool    bIsMantling = false;
+	FVector MantleTargetLocation = FVector::ZeroVector;
 };
 
