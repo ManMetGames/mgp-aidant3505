@@ -67,7 +67,7 @@ protected:
 	float LowerTraceHeightOffset = -20.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
-	float UpperTraceHeightOffset = 60.f;
+	float UpperTraceHeightOffset = 40.f;
 
 	/** Mantle Movement */
 	// How fast the character moves to the mantle target
@@ -85,8 +85,10 @@ protected:
 	// How long after a mantle completes before detection re-enables (seconds)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
 	float MantleCooldownDuration = 0.5f;
-
 	float MantleCooldownRemaining = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
+	float MantleBuffer = 40.f;
 
 
 public:

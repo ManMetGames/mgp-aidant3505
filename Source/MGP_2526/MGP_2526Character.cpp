@@ -235,9 +235,9 @@ void AMGP_2526Character::StartMantle(const FVector& WallHitLocation)
 	const FVector CapsuleOrigin = GetCapsuleComponent()->GetComponentLocation();
 	const FVector ForwardVector = GetCapsuleComponent()->GetForwardVector();
 	MantleTargetLocation = FVector(
-		WallHitLocation.X + ForwardVector.X * MantleForwardOffset,  // step onto the ledge
+		WallHitLocation.X + ForwardVector.X * MantleForwardOffset,  
 		WallHitLocation.Y + ForwardVector.Y * MantleForwardOffset,
-		CapsuleOrigin.Z + UpperTraceHeightOffset + 30);             // rise to ledge top
+		CapsuleOrigin.Z + UpperTraceHeightOffset + MantleBuffer);   
 
 	bIsMantling = true;
 
