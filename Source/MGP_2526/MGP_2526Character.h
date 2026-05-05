@@ -76,11 +76,17 @@ protected:
 
 	// How far forward past the edge of the ledge the character is placed
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
-	float MantleForwardOffset = 60.f;
+	float MantleForwardOffset = 30.f;
 
 	// Distance threshold at which the mantle is considered complete 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
-	float MantleCompletionRadius = 10.f;
+	float MantleCompletionRadius = 30.f;
+
+	// How long after a mantle completes before detection re-enables (seconds)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
+	float MantleCooldownDuration = 0.5f;
+
+	float MantleCooldownRemaining = 0.f;
 
 
 public:

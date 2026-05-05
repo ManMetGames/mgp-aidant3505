@@ -15,6 +15,7 @@
 
 AMGP_2526Character::AMGP_2526Character()
 {
+	PrimaryActorTick.bCanEverTick = true;
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
@@ -55,7 +56,24 @@ void AMGP_2526Character::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	DoMantleDetection();
+	if (bIsMantling)
+	{
+		// While mantling, drive the character toward the target and skip detection
+		TickMantle(DeltaTime);
+	}
+	else
+	{
+		if (MantleCooldownRemaining > 0.f)
+		{
+			MantleCooldownRemaining -= DeltaTime;
+			return;
+		}
+		if (GetCharacterMovement()->IsMovingOnGround())
+		{
+			DoMantleDetection();
+		}
+	}
+
 }
 
 
@@ -187,6 +205,7 @@ void AMGP_2526Character::DoMantleDetection()
 	// Checks if lower hits a wall but upper is clear
 	if (bLowerHit && !bUpperHit)
 	{
+		StartMantle(LowerHit.ImpactPoint);
 		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan, "Can mantle");
 	}
 }
@@ -208,6 +227,43 @@ bool AMGP_2526Character::FireMantleTrace(const FVector& Start, const FVector& En
 		OutHit,
 		true                                                      // Ignore Self
 	);
+}
+
+void AMGP_2526Character::StartMantle(const FVector& WallHitLocation)
+{
+	// Calculates the pos the character should go to:
+	const FVector CapsuleOrigin = GetCapsuleComponent()->GetComponentLocation();
+	const FVector ForwardVector = GetCapsuleComponent()->GetForwardVector();
+	MantleTargetLocation = FVector(
+		WallHitLocation.X + ForwardVector.X * MantleForwardOffset,  // step onto the ledge
+		WallHitLocation.Y + ForwardVector.Y * MantleForwardOffset,
+		CapsuleOrigin.Z + UpperTraceHeightOffset + 30);             // rise to ledge top
+
+	bIsMantling = true;
+
+	// Switch to Flying so gravity does not pull the character back down mid-mantle
+	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+}
+
+void AMGP_2526Character::TickMantle(float DeltaTime)
+{
+	const FVector CurrentLocation = GetActorLocation();
+
+	// Smoothly interpolate toward the target
+	const FVector NewLocation = FMath::VInterpTo(CurrentLocation, MantleTargetLocation, DeltaTime, MantleInterpSpeed);
+
+	SetActorLocation(NewLocation, false);
+
+	// Check if we have arrived
+	if (FVector::Dist(NewLocation, MantleTargetLocation) < MantleCompletionRadius)
+	{
+		// Snap exactly to target and restore normal movement
+		SetActorLocation(MantleTargetLocation);
+		bIsMantling = false;
+		// Start cooldown to prevent immediate re-trigger 
+		MantleCooldownRemaining = MantleCooldownDuration;
+		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	}
 }
 
 
