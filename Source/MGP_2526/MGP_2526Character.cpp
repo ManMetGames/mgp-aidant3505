@@ -225,7 +225,7 @@ bool AMGP_2526Character::FireMantleTrace(const FVector& Start, const FVector& En
 		UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false,                                                    // Trace Complex
 		ActorsToIgnore,
-		bDrawDebug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
+		bDrawDebug ? EDrawDebugTrace:: None : EDrawDebugTrace::None,
 		OutHit,
 		true                                                      // Ignore Self
 	);
@@ -245,6 +245,12 @@ void AMGP_2526Character::StartMantle(const FVector& WallHitLocation)
 
 	// Switch to Flying so gravity does not pull the character back down mid-mantle
 	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+
+	// Plays mantle animation
+	if (MantleMontage)
+	{
+		PlayAnimMontage(MantleMontage);
+	}
 }
 
 void AMGP_2526Character::TickMantle(float DeltaTime)
