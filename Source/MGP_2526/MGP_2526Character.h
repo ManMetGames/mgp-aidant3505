@@ -72,7 +72,7 @@ protected:
 	/** Mantle Movement */
 	// How fast the character moves to the mantle target
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
-	float MantleInterpSpeed = 5.f;
+	float MantleInterpSpeed = 15.f;
 
 	// How far forward past the edge of the ledge the character is placed
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
@@ -84,11 +84,11 @@ protected:
 
 	// How long after a mantle completes before detection re-enables (seconds)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
-	float MantleCooldownDuration = 0.5f;
+	float MantleCooldownDuration = 1.f;
 	float MantleCooldownRemaining = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
-	float MantleBuffer = 60.f;
+	float MantleBuffer = 80.f;
 
 	/** Mantle Animation */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Animation")
@@ -161,7 +161,7 @@ private:
 	void DoMantleDetection();
 
 	/** Fires a single line trace and returns true on a hit */
-	bool FireMantleTrace(const FVector& Start, const FVector& End, FHitResult& OutHit, bool bDrawDebug) const;
+	bool FireMantleTrace(const FVector& Start, const FVector& End, FHitResult& OutHit) const;
 
 	/** Called once when a mantleable ledge is first detected */
 	void StartMantle(const FVector& WallHitLocation);
@@ -169,10 +169,16 @@ private:
 	/** Called every tick while bIsMantling is true */
 	void TickMantle(float DeltaTime);
 
-	// Runtime mantle state
+	// Runtime mantle states
+	bool bMantleRising = false;
 	bool bIsMantling = false;
-	FVector MantleTargetLocation = FVector::ZeroVector;
 
+	// Runtime sprint state
 	bool bIsSprinting = false;
+
+	// Mantle target positions
+	FVector MantleTargetLocation = FVector::ZeroVector;
+	FVector MantleRiseTarget = FVector::ZeroVector;
+	FVector MantleForwardTarget = FVector::ZeroVector;
 };
 

@@ -198,14 +198,14 @@ void AMGP_2526Character::DoMantleDetection()
 	const FVector LowerEnd = LowerStart + ForwardVector * TraceDistance;
 
 	FHitResult LowerHit;
-	const bool bLowerHit = FireMantleTrace(LowerStart, LowerEnd, LowerHit, true);
+	const bool bLowerHit = FireMantleTrace(LowerStart, LowerEnd, LowerHit);
 
 	// Upper trace
 	const FVector UpperStart = CapsuleOrigin + FVector(0.f, 0.f, UpperTraceHeightOffset);
 	const FVector UpperEnd = UpperStart + ForwardVector * TraceDistance;
 
 	FHitResult UpperHit;
-	const bool bUpperHit = FireMantleTrace(UpperStart, UpperEnd, UpperHit, true);
+	const bool bUpperHit = FireMantleTrace(UpperStart, UpperEnd, UpperHit);
 
 	// Checks if player has met the conditions to be able to mantle
 	if (bLowerHit && !bUpperHit && bIsSprinting)
@@ -215,7 +215,7 @@ void AMGP_2526Character::DoMantleDetection()
 }
 
 
-bool AMGP_2526Character::FireMantleTrace(const FVector& Start, const FVector& End, FHitResult& OutHit, bool bDrawDebug) const
+bool AMGP_2526Character::FireMantleTrace(const FVector& Start, const FVector& End, FHitResult& OutHit) const
 {
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(const_cast<AMGP_2526Character*>(this));
@@ -225,27 +225,37 @@ bool AMGP_2526Character::FireMantleTrace(const FVector& Start, const FVector& En
 		Start,
 		End,
 		UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		false,                                                    // Trace Complex
+		false,                                                    
 		ActorsToIgnore,
-		bDrawDebug ? EDrawDebugTrace:: None : EDrawDebugTrace::None,
+		EDrawDebugTrace::None,
 		OutHit,
-		true                                                      // Ignore Self
+		true                                                     
 	);
 }
 
 void AMGP_2526Character::StartMantle(const FVector& WallHitLocation)
 {
-	// Calculates the pos the character should go to:
+	// Calculates the posistions the character should go to
 	const FVector CapsuleOrigin = GetCapsuleComponent()->GetComponentLocation();
 	const FVector ForwardVector = GetCapsuleComponent()->GetForwardVector();
-	MantleTargetLocation = FVector(
-		WallHitLocation.X + ForwardVector.X * MantleForwardOffset,  
-		WallHitLocation.Y + ForwardVector.Y * MantleForwardOffset,
-		CapsuleOrigin.Z + UpperTraceHeightOffset + MantleBuffer);   
+	const float   LedgeHeight = CapsuleOrigin.Z + UpperTraceHeightOffset + MantleBuffer;
 
+	// Rises up to hight of the ledge
+	MantleRiseTarget = FVector(CapsuleOrigin.X, CapsuleOrigin.Y, LedgeHeight);
+
+	// Steps forward onto the ledge from the risen position
+	MantleForwardTarget = FVector(
+		WallHitLocation.X + ForwardVector.X * MantleForwardOffset,
+		WallHitLocation.Y + ForwardVector.Y * MantleForwardOffset,
+		LedgeHeight
+	);
+
+	// Starts in the rise phase
+	MantleTargetLocation = MantleRiseTarget;
+	bMantleRising = true;
 	bIsMantling = true;
 
-	// Switch to Flying so gravity does not pull the character back down mid-mantle
+	// Switch to Flying so gravity doesn't affect the player
 	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
 	GetCharacterMovement()->Velocity = FVector::ZeroVector;
 
@@ -259,22 +269,27 @@ void AMGP_2526Character::StartMantle(const FVector& WallHitLocation)
 void AMGP_2526Character::TickMantle(float DeltaTime)
 {
 	const FVector CurrentLocation = GetActorLocation();
+	const FVector NewPos = FMath::VInterpTo(CurrentLocation, MantleTargetLocation, DeltaTime, MantleInterpSpeed);
 
-	// Smoothly interpolate toward the target
-	const FVector NewLocation = FMath::VInterpTo(CurrentLocation, MantleTargetLocation, DeltaTime, MantleInterpSpeed);
+	SetActorLocation(NewPos, false);
 
-	SetActorLocation(NewLocation, false);
-
-	// Check if we have arrived
-	if (FVector::Dist(NewLocation, MantleTargetLocation) < MantleCompletionRadius)
+	// Checks if the pos of the player is within range of current mantle target pos 
+	if (FVector::Dist(NewPos, MantleTargetLocation) < MantleCompletionRadius)
 	{
-		// Snap exactly to target and restore normal movement
-		SetActorLocation(MantleTargetLocation);
-		bIsMantling = false;
-		// Start cooldown to prevent immediate re-trigger 
-		MantleCooldownRemaining = MantleCooldownDuration;
-		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan, "Mantle Done");
+		if (bMantleRising)
+		{
+			// Rise phase done, Start moving player forward
+			bMantleRising = false;
+			MantleTargetLocation = MantleForwardTarget;
+		}
+		else
+		{
+			// Forward phase done
+			SetActorLocation(MantleForwardTarget);
+			bIsMantling = false;
+			MantleCooldownRemaining = MantleCooldownDuration;
+			GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		}
 	}
 }
 
