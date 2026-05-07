@@ -123,6 +123,9 @@ void AMGP_2526Character::Look(const FInputActionValue& Value)
 
 void AMGP_2526Character::DoMove(float Right, float Forward)
 {
+	// Disables movement if the player is mantling
+	if (bIsMantling) return;
+
 	if (GetController() != nullptr)
 	{
 		// Find out which way is forward
@@ -208,7 +211,6 @@ void AMGP_2526Character::DoMantleDetection()
 	if (bLowerHit && !bUpperHit && bIsSprinting)
 	{
 		StartMantle(LowerHit.ImpactPoint);
-		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan, "Can mantle");
 	}
 }
 
@@ -245,6 +247,7 @@ void AMGP_2526Character::StartMantle(const FVector& WallHitLocation)
 
 	// Switch to Flying so gravity does not pull the character back down mid-mantle
 	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+	GetCharacterMovement()->Velocity = FVector::ZeroVector;
 
 	// Plays mantle animation
 	if (MantleMontage)
@@ -271,6 +274,7 @@ void AMGP_2526Character::TickMantle(float DeltaTime)
 		// Start cooldown to prevent immediate re-trigger 
 		MantleCooldownRemaining = MantleCooldownDuration;
 		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Cyan, "Mantle Done");
 	}
 }
 

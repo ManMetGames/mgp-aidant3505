@@ -67,12 +67,12 @@ protected:
 	float LowerTraceHeightOffset = -20.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
-	float UpperTraceHeightOffset = 40.f;
+	float UpperTraceHeightOffset = 10.f;
 
 	/** Mantle Movement */
 	// How fast the character moves to the mantle target
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
-	float MantleInterpSpeed = 10.f;
+	float MantleInterpSpeed = 5.f;
 
 	// How far forward past the edge of the ledge the character is placed
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
@@ -80,7 +80,7 @@ protected:
 
 	// Distance threshold at which the mantle is considered complete 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
-	float MantleCompletionRadius = 30.f;
+	float MantleCompletionRadius = 5.f;
 
 	// How long after a mantle completes before detection re-enables (seconds)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
@@ -88,7 +88,7 @@ protected:
 	float MantleCooldownRemaining = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
-	float MantleBuffer = 40.f;
+	float MantleBuffer = 60.f;
 
 	/** Mantle Animation */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Animation")
