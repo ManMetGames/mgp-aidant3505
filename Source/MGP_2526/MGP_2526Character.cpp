@@ -47,9 +47,6 @@ AMGP_2526Character::AMGP_2526Character()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
-
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
 
 void AMGP_2526Character::Tick(float DeltaTime)
@@ -58,16 +55,18 @@ void AMGP_2526Character::Tick(float DeltaTime)
 
 	if (bIsMantling)
 	{
-		// While mantling, drive the character toward the target and skip detection
+		// While mantling is true, move the character toward the target positions
 		TickMantle(DeltaTime);
 	}
 	else
 	{
+		// Cooldown between mantles
 		if (MantleCooldownRemaining > 0.f)
 		{
 			MantleCooldownRemaining -= DeltaTime;
 			return;
 		}
+		// Makes it so player can only mantle when on the ground
 		if (GetCharacterMovement()->IsMovingOnGround())
 		{
 			DoMantleDetection();
@@ -210,11 +209,23 @@ void AMGP_2526Character::DoMantleDetection()
 	// Checks if player has met the conditions to be able to mantle
 	if (bLowerHit && !bUpperHit && bIsSprinting)
 	{
-		StartMantle(LowerHit.ImpactPoint);
+		// Fires a downward trace infront of the player and above the wall to find ledge surface Z (height)
+		const FVector DownStart = FVector(
+			LowerHit.ImpactPoint.X + ForwardVector.X * 5.f,   
+			LowerHit.ImpactPoint.Y + ForwardVector.Y * 5.f,
+			CapsuleOrigin.Z + DownTraceStartHeight
+		);
+		const FVector DownEnd = FVector(DownStart.X, DownStart.Y, CapsuleOrigin.Z - 100.f);
+
+		FHitResult LedgeHit;
+		if (FireMantleTrace(DownStart, DownEnd, LedgeHit))
+		{
+			StartMantle(LowerHit.ImpactPoint, LedgeHit.ImpactPoint.Z);
+		}
 	}
 }
 
-
+// Function to shoot out traces from player 
 bool AMGP_2526Character::FireMantleTrace(const FVector& Start, const FVector& End, FHitResult& OutHit) const
 {
 	TArray<AActor*> ActorsToIgnore;
@@ -229,28 +240,29 @@ bool AMGP_2526Character::FireMantleTrace(const FVector& Start, const FVector& En
 		ActorsToIgnore,
 		EDrawDebugTrace::None,
 		OutHit,
-		true                                                     
+		true
 	);
 }
 
-void AMGP_2526Character::StartMantle(const FVector& WallHitLocation)
+void AMGP_2526Character::StartMantle(const FVector& WallHitLocation, float LedgeZ)
 {
 	// Calculates the posistions the character should go to
 	const FVector CapsuleOrigin = GetCapsuleComponent()->GetComponentLocation();
 	const FVector ForwardVector = GetCapsuleComponent()->GetForwardVector();
-	const float   LedgeHeight = CapsuleOrigin.Z + UpperTraceHeightOffset + MantleBuffer;
+	const float CapsuleHalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	const float TargetZ = LedgeZ + CapsuleHalfHeight + MantleBuffer;
 
-	// Rises up to hight of the ledge
-	MantleRiseTarget = FVector(CapsuleOrigin.X, CapsuleOrigin.Y, LedgeHeight);
+	// Sets the height pos the player should rise to based off ledge height
+	MantleRiseTarget = FVector(CapsuleOrigin.X, CapsuleOrigin.Y, TargetZ);
 
-	// Steps forward onto the ledge from the risen position
+	// Sets the forward pos the player should move to based off forward offset
 	MantleForwardTarget = FVector(
 		WallHitLocation.X + ForwardVector.X * MantleForwardOffset,
 		WallHitLocation.Y + ForwardVector.Y * MantleForwardOffset,
-		LedgeHeight
+		TargetZ
 	);
 
-	// Starts in the rise phase
+	// Starts in the rise player phase
 	MantleTargetLocation = MantleRiseTarget;
 	bMantleRising = true;
 	bIsMantling = true;

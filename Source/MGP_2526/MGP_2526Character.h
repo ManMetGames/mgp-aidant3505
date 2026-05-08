@@ -55,19 +55,23 @@ protected:
 	/** Movement Speeds */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float WalkSpeed = 300.f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float SprintSpeed = 600.f;
 
 	/** Mantle Traces */
+	// How far away the player can mantle a ledge from
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
 	float TraceDistance = 40.f;
-
+	
+	// Used to check if a ledge is within hight range to be mantled
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
 	float LowerTraceHeightOffset = -20.f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
 	float UpperTraceHeightOffset = 10.f;
+
+	// Used to calculate the hight of the ledge trying to be mantled
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
+	float DownTraceStartHeight = 100.f;
 
 	/** Mantle Movement */
 	// How fast the character moves to the mantle target
@@ -87,8 +91,9 @@ protected:
 	float MantleCooldownDuration = 1.f;
 	float MantleCooldownRemaining = 0.f;
 
+	// Small buffer room to prevent potential clipping
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
-	float MantleBuffer = 80.f;
+	float MantleBuffer = 2.f;
 
 	/** Mantle Animation */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Animation")
@@ -138,7 +143,6 @@ public:
 	/** Handles sprint input */
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void SprintStart();
-
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void SprintStop();
 
@@ -164,7 +168,7 @@ private:
 	bool FireMantleTrace(const FVector& Start, const FVector& End, FHitResult& OutHit) const;
 
 	/** Called once when a mantleable ledge is first detected */
-	void StartMantle(const FVector& WallHitLocation);
+	void StartMantle(const FVector& WallHitLocation, float LedgeZ);
 
 	/** Called every tick while bIsMantling is true */
 	void TickMantle(float DeltaTime);
