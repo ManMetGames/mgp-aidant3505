@@ -238,7 +238,7 @@ bool AMGP_2526Character::FireMantleTrace(const FVector& Start, const FVector& En
 		UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false,                                                    
 		ActorsToIgnore,
-		EDrawDebugTrace::None,
+		EDrawDebugTrace::ForOneFrame,
 		OutHit,
 		true
 	);

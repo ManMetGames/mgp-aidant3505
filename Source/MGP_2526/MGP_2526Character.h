@@ -65,9 +65,9 @@ protected:
 	
 	// Used to check if a ledge is within hight range to be mantled
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
-	float LowerTraceHeightOffset = -20.f;
+	float LowerTraceHeightOffset = -45.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
-	float UpperTraceHeightOffset = 10.f;
+	float UpperTraceHeightOffset = 20.f;
 
 	// Used to calculate the hight of the ledge trying to be mantled
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
@@ -88,7 +88,7 @@ protected:
 
 	// How long after a mantle completes before detection re-enables (seconds)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
-	float MantleCooldownDuration = 1.f;
+	float MantleCooldownDuration = 0.5f;
 	float MantleCooldownRemaining = 0.f;
 
 	// Small buffer room to prevent potential clipping
