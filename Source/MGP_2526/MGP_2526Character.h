@@ -86,7 +86,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
 	float MantleCompletionRadius = 5.f;
 
-	// How long after a mantle completes before detection re-enables (seconds)
+	// How long after a mantle completes before detection re-enables (in seconds)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
 	float MantleCooldownDuration = 0.5f;
 	float MantleCooldownRemaining = 0.f;

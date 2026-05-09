@@ -66,15 +66,12 @@ void AMGP_2526Character::Tick(float DeltaTime)
 			MantleCooldownRemaining -= DeltaTime;
 			return;
 		}
-		// Makes it so player can only mantle when on the ground
-		if (GetCharacterMovement()->IsMovingOnGround())
-		{
-			DoMantleDetection();
-		}
+		
+		// Calls mantle detection function every tick
+		DoMantleDetection();
 	}
 
 }
-
 
 void AMGP_2526Character::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -225,7 +222,7 @@ void AMGP_2526Character::DoMantleDetection()
 	}
 }
 
-// Function to shoot out traces from player 
+// Function to shoot out traces from the player 
 bool AMGP_2526Character::FireMantleTrace(const FVector& Start, const FVector& End, FHitResult& OutHit) const
 {
 	TArray<AActor*> ActorsToIgnore;
@@ -238,7 +235,7 @@ bool AMGP_2526Character::FireMantleTrace(const FVector& Start, const FVector& En
 		UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false,                                                    
 		ActorsToIgnore,
-		EDrawDebugTrace::ForOneFrame,
+		EDrawDebugTrace::None,
 		OutHit,
 		true
 	);
