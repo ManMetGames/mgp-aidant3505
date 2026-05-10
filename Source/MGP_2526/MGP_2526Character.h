@@ -49,10 +49,65 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* MouseLookAction;
 
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* SprintAction;
+
+	/** Movement Speeds */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	float WalkSpeed = 300.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	float SprintSpeed = 600.f;
+
+	/** Mantle Traces */
+	// How far away the player can mantle a ledge from
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
+	float TraceDistance = 40.f;
+	
+	// Used to check if a ledge is within hight range to be mantled
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
+	float LowerTraceHeightOffset = -45.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
+	float UpperTraceHeightOffset = 20.f;
+
+	// Used to calculate the hight of the ledge trying to be mantled
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Trace")
+	float DownTraceStartHeight = 100.f;
+
+	/** Mantle Movement */
+	// How fast the character moves to the mantle target
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
+	float MantleInterpSpeed = 15.f;
+
+	// How far forward past the edge of the ledge the character is placed
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
+	float MantleForwardOffset = 30.f;
+
+	// Distance threshold at which the mantle is considered complete 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
+	float MantleCompletionRadius = 5.f;
+
+	// How long after a mantle completes before detection re-enables (in seconds)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
+	float MantleCooldownDuration = 0.5f;
+	float MantleCooldownRemaining = 0.f;
+
+	// Small buffer room to prevent potential clipping
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Movement")
+	float MantleBuffer = 2.f;
+
+	/** Mantle Animation */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mantle|Animation")
+	UAnimMontage* MantleMontage = nullptr;
+
+
 public:
 
 	/** Constructor */
 	AMGP_2526Character();	
+
+	/** Called every frame */
+	virtual void Tick(float DeltaTime) override;
+
 
 protected:
 
@@ -85,12 +140,49 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
 
+	/** Handles sprint input */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void SprintStart();
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void SprintStop();
+
+	/** Returns true while the character is mid-mantle. Used for animation */
+	UFUNCTION(BlueprintPure, Category = "Mantle")
+	bool IsMantling() const { return bIsMantling; }
+
+
 public:
 
-	/** Returns CameraBoom subobject **/
+	/** Returns CameraBoom subobject */
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
-	/** Returns FollowCamera subobject **/
+	/** Returns FollowCamera subobject */
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+private:
+
+	/**Fires the lower and upper traces each tick */
+	void DoMantleDetection();
+
+	/** Fires a single line trace and returns true on a hit */
+	bool FireMantleTrace(const FVector& Start, const FVector& End, FHitResult& OutHit) const;
+
+	/** Called once when a mantleable ledge is first detected */
+	void StartMantle(const FVector& WallHitLocation, float LedgeZ);
+
+	/** Called every tick while bIsMantling is true */
+	void TickMantle(float DeltaTime);
+
+	// Runtime mantle states
+	bool bMantleRising = false;
+	bool bIsMantling = false;
+
+	// Runtime sprint state
+	bool bIsSprinting = false;
+
+	// Mantle target positions
+	FVector MantleTargetLocation = FVector::ZeroVector;
+	FVector MantleRiseTarget = FVector::ZeroVector;
+	FVector MantleForwardTarget = FVector::ZeroVector;
 };
 

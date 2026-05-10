@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "MGP_2526Character.h"
 #include "Engine/LocalPlayer.h"
@@ -10,10 +10,12 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "MGP_2526.h"
 
 AMGP_2526Character::AMGP_2526Character()
 {
+	PrimaryActorTick.bCanEverTick = true;
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
@@ -30,7 +32,7 @@ AMGP_2526Character::AMGP_2526Character()
 	// instead of recompiling to adjust them
 	GetCharacterMovement()->JumpZVelocity = 500.f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
@@ -45,9 +47,30 @@ AMGP_2526Character::AMGP_2526Character()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+}
 
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+void AMGP_2526Character::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (bIsMantling)
+	{
+		// While mantling is true, move the character toward the target positions
+		TickMantle(DeltaTime);
+	}
+	else
+	{
+		// Cooldown between mantles
+		if (MantleCooldownRemaining > 0.f)
+		{
+			MantleCooldownRemaining -= DeltaTime;
+			return;
+		}
+		
+		// Calls mantle detection function every tick
+		DoMantleDetection();
+	}
+
 }
 
 void AMGP_2526Character::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -65,6 +88,10 @@ void AMGP_2526Character::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMGP_2526Character::Look);
+
+		// Sprinting
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AMGP_2526Character::SprintStart);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AMGP_2526Character::SprintStop);
 	}
 	else
 	{
@@ -74,37 +101,40 @@ void AMGP_2526Character::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
 void AMGP_2526Character::Move(const FInputActionValue& Value)
 {
-	// input is a Vector2D
+	// Input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
-	// route the input
+	// Route the input
 	DoMove(MovementVector.X, MovementVector.Y);
 }
 
 void AMGP_2526Character::Look(const FInputActionValue& Value)
 {
-	// input is a Vector2D
+	// Input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
-	// route the input
+	// Route the input
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
 }
 
 void AMGP_2526Character::DoMove(float Right, float Forward)
 {
+	// Disables movement if the player is mantling
+	if (bIsMantling) return;
+
 	if (GetController() != nullptr)
 	{
-		// find out which way is forward
+		// Find out which way is forward
 		const FRotator Rotation = GetController()->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
 
-		// get forward vector
+		// Get forward vector
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 
-		// get right vector 
+		// Get right vector 
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
-		// add movement 
+		// Add movement 
 		AddMovementInput(ForwardDirection, Forward);
 		AddMovementInput(RightDirection, Right);
 	}
@@ -114,7 +144,7 @@ void AMGP_2526Character::DoLook(float Yaw, float Pitch)
 {
 	if (GetController() != nullptr)
 	{
-		// add yaw and pitch input to controller
+		// Add yaw and pitch input to controller
 		AddControllerYawInput(Yaw);
 		AddControllerPitchInput(Pitch);
 	}
@@ -122,12 +152,154 @@ void AMGP_2526Character::DoLook(float Yaw, float Pitch)
 
 void AMGP_2526Character::DoJumpStart()
 {
-	// signal the character to jump
+	// Signal the character to jump
 	Jump();
 }
 
 void AMGP_2526Character::DoJumpEnd()
 {
-	// signal the character to stop jumping
+	// Signal the character to stop jumping
 	StopJumping();
 }
+
+void AMGP_2526Character::SprintStart()
+{
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+	}
+	bIsSprinting = true;
+}
+
+void AMGP_2526Character::SprintStop()
+{
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	}
+	bIsSprinting = false;
+}
+
+// Mantle detection
+void AMGP_2526Character::DoMantleDetection()
+{
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+	if (!Capsule) return;
+
+	const FVector CapsuleOrigin = Capsule->GetComponentLocation();
+	const FVector ForwardVector = Capsule->GetForwardVector();
+
+	// Lower trace  
+	const FVector LowerStart = CapsuleOrigin + FVector(0.f, 0.f, LowerTraceHeightOffset);
+	const FVector LowerEnd = LowerStart + ForwardVector * TraceDistance;
+
+	FHitResult LowerHit;
+	const bool bLowerHit = FireMantleTrace(LowerStart, LowerEnd, LowerHit);
+
+	// Upper trace
+	const FVector UpperStart = CapsuleOrigin + FVector(0.f, 0.f, UpperTraceHeightOffset);
+	const FVector UpperEnd = UpperStart + ForwardVector * TraceDistance;
+
+	FHitResult UpperHit;
+	const bool bUpperHit = FireMantleTrace(UpperStart, UpperEnd, UpperHit);
+
+	// Checks if player has met the conditions to be able to mantle
+	if (bLowerHit && !bUpperHit && bIsSprinting)
+	{
+		// Fires a downward trace infront of the player and above the wall to find ledge surface Z (height)
+		const FVector DownStart = FVector(
+			LowerHit.ImpactPoint.X + ForwardVector.X * 5.f,   
+			LowerHit.ImpactPoint.Y + ForwardVector.Y * 5.f,
+			CapsuleOrigin.Z + DownTraceStartHeight
+		);
+		const FVector DownEnd = FVector(DownStart.X, DownStart.Y, CapsuleOrigin.Z - 100.f);
+
+		FHitResult LedgeHit;
+		if (FireMantleTrace(DownStart, DownEnd, LedgeHit))
+		{
+			StartMantle(LowerHit.ImpactPoint, LedgeHit.ImpactPoint.Z);
+		}
+	}
+}
+
+// Function to shoot out traces from the player 
+bool AMGP_2526Character::FireMantleTrace(const FVector& Start, const FVector& End, FHitResult& OutHit) const
+{
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(const_cast<AMGP_2526Character*>(this));
+
+	return UKismetSystemLibrary::LineTraceSingle(
+		const_cast<AMGP_2526Character*>(this),
+		Start,
+		End,
+		UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		false,                                                    
+		ActorsToIgnore,
+		EDrawDebugTrace::None,
+		OutHit,
+		true
+	);
+}
+
+void AMGP_2526Character::StartMantle(const FVector& WallHitLocation, float LedgeZ)
+{
+	// Calculates the posistions the character should go to
+	const FVector CapsuleOrigin = GetCapsuleComponent()->GetComponentLocation();
+	const FVector ForwardVector = GetCapsuleComponent()->GetForwardVector();
+	const float CapsuleHalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	const float TargetZ = LedgeZ + CapsuleHalfHeight + MantleBuffer;
+
+	// Sets the height pos the player should rise to based off ledge height
+	MantleRiseTarget = FVector(CapsuleOrigin.X, CapsuleOrigin.Y, TargetZ);
+
+	// Sets the forward pos the player should move to based off forward offset
+	MantleForwardTarget = FVector(
+		WallHitLocation.X + ForwardVector.X * MantleForwardOffset,
+		WallHitLocation.Y + ForwardVector.Y * MantleForwardOffset,
+		TargetZ
+	);
+
+	// Starts in the rise player phase
+	MantleTargetLocation = MantleRiseTarget;
+	bMantleRising = true;
+	bIsMantling = true;
+
+	// Switch to Flying so gravity doesn't affect the player
+	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+	GetCharacterMovement()->Velocity = FVector::ZeroVector;
+
+	// Plays mantle animation
+	if (MantleMontage)
+	{
+		PlayAnimMontage(MantleMontage);
+	}
+}
+
+void AMGP_2526Character::TickMantle(float DeltaTime)
+{
+	const FVector CurrentLocation = GetActorLocation();
+	const FVector NewPos = FMath::VInterpTo(CurrentLocation, MantleTargetLocation, DeltaTime, MantleInterpSpeed);
+
+	SetActorLocation(NewPos, false);
+
+	// Checks if the pos of the player is within range of current mantle target pos 
+	if (FVector::Dist(NewPos, MantleTargetLocation) < MantleCompletionRadius)
+	{
+		if (bMantleRising)
+		{
+			// Rise phase done, Start moving player forward
+			bMantleRising = false;
+			MantleTargetLocation = MantleForwardTarget;
+		}
+		else
+		{
+			// Forward phase done
+			SetActorLocation(MantleForwardTarget);
+			bIsMantling = false;
+			MantleCooldownRemaining = MantleCooldownDuration;
+			GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		}
+	}
+}
+
+
